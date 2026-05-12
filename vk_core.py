@@ -109,19 +109,23 @@ for ev in longpoll.listen():
         # --- УРОВЕНЬ 3: ИГРОВОЙ ПРОЦЕСС ---
         # Если юзер в сценарии — отправляем текст в ядро
         if u_id in core.curr_scn:
-            ans = core.proc_msg(u_id, ev.text)
+            try:
+                ans = core.proc_msg(u_id, ev.text)
+                
+                # Проверяем, не закончилась ли игра после этого ответа
+                scn = core.curr_scn.get(u_id)
+                st_id = core.user_st.get(u_id)
+                is_final = core.scns[scn]['states'][st_id].get('is_final')
+                
+                kb = get_start_kb() if is_final else get_game_kb()
+                if is_final: 
+                    logging.info(f"UID: {u_id} | Action: REACHED_FINAL | Scenario: {scn}")
+                    core.curr_scn.pop(u_id, None) # Чистим после финала
             
-            # Проверяем, не закончилась ли игра после этого ответа
-            scn = core.curr_scn.get(u_id)
-            st_id = core.user_st.get(u_id)
-            is_final = core.scns[scn]['states'][st_id].get('is_final')
-            
-            kb = get_start_kb() if is_final else get_game_kb()
-            if is_final: 
-                logging.info(f"UID: {u_id} | Action: REACHED_FINAL | Scenario: {scn}")
-                core.curr_scn.pop(u_id, None) # Чистим после финала
-            
-            vk.messages.send(user_id=u_id, message=ans, random_id=0, keyboard=kb)
+                vk.messages.send(user_id=u_id, message=ans, random_id=0, keyboard=kb)
+            except Exception as e:
+                logging.error(f"CRITICAL ERROR: {e}")
+                vk.messages.send(user_id=u_id, message="Ой! В сценарии ошибка. Админ уже в курсе.", random_id=0)
         else:
             # Если юзер не в игре и пишет ерунду
             vk.messages.send(user_id=u_id, message="Нажми 'Начать сценарий', чтобы запустить тренажер.", random_id=0, keyboard=get_start_kb())

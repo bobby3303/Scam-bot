@@ -48,16 +48,18 @@ class BotCore:
         return False
 
     def _get_state_text(self, u_id, st_id):
-        """Вспомогательный метод для сборки текста с подстановкой баллов"""
         scn_name = self.curr_scn.get(u_id)
         scn_data = self.scns[scn_name]
-        raw_text = scn_data["states"][st_id]["text"]
         
-        # Если текст — список строк, соединяем их
+        # БЕЗОПАСНОСТЬ: если состояния нет, бот не упадет, а напишет ошибку
+        state = scn_data["states"].get(st_id)
+        if not state:
+            return f"⚠ Ошибка сценария: состояние '{st_id}' не найдено. Напишите 'старт' для сброса."
+            
+        raw_text = state["text"]
         if isinstance(raw_text, list):
             raw_text = "\n".join(raw_text)
             
-        # Подставляем баллы, если в тексте есть {vulnerability}
         try:
             return raw_text.format(vulnerability=self.user_vuln.get(u_id, 0))
         except KeyError:
@@ -71,6 +73,14 @@ class BotCore:
         scn_data = self.scns[scn_name]
         cur_id = self.user_st.get(u_id)
         st = scn_data["states"][cur_id]
+
+    def set_scn(self, u_id, f_name):
+        self.curr_scn[u_id] = f_name
+        scn_data = self.scns[f_name]
+        self.user_st[u_id] = scn_data["initial_state"]
+        self.user_rep[u_id] = 0
+        self.user_vuln[u_id] = 0
+        return self._get_state_text(u_id, scn_data["initial_state"])
 
         # --- 1. ОБЫЧНЫЙ ПОИСК ПЕРЕХОДА ПО КЛЮЧЕВЫМ СЛОВАМ ---
         next_st_id = None
