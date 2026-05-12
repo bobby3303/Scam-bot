@@ -93,12 +93,15 @@ class BotCore:
                 break
 
         # --- 2. ЕСЛИ КЛЮЧЕВОЕ СЛОВО НЕ НАЙДЕНО (DEFAULT TRANSITION) ---
+       # --- 2. ЕСЛИ КЛЮЧЕВОЕ СЛОВО НЕ НАЙДЕНО ---
         if not next_st_id:
             df = st.get("default_transition")
             if df:
                 self.user_rep[u_id] = self.user_rep.get(u_id, 0) + 1
-                if self.user_rep[u_id] >= df.get("max_repeats", 2):
-                    next_st_id = df["alternative_state"]
+                # Проверяем наличие ключа alternative_state, чтобы не падать
+                alt_st = df.get("alternative_state")
+                if self.user_rep[u_id] >= df.get("max_repeats", 2) and alt_st:
+                    next_st_id = alt_st
                     self.user_rep[u_id] = 0
                 else:
                     return self._get_state_text(u_id, cur_id)
